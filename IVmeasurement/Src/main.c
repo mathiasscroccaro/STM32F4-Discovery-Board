@@ -84,6 +84,10 @@ static void MX_DAC_Init(void);
 void doIVmeasure(void);
 
 uint32_t adcValue[2];
+
+uint16_t adc1Data[4096];
+uint16_t adc2Data[4096];
+
 /* USER CODE END 0 */
 
 /**
@@ -123,6 +127,10 @@ int main(void)
 
   HAL_GPIO_WritePin(GPIOD,GPIO_PIN_12,GPIO_PIN_RESET);
   HAL_DAC_Start(&hdac,DAC_CHANNEL_1);
+  HAL_DAC_Start(&hdac,DAC_CHANNEL_2);
+
+  HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,0);
+  HAL_DAC_SetValue(&hdac,DAC_CHANNEL_2,DAC_ALIGN_12B_R,0);
 
   /* USER CODE END 2 */
 
@@ -137,19 +145,21 @@ int main(void)
 	if (fUsbReceived == 1)
 	{
 		fUsbReceived = 0;
-		doIVmeasure();
+		aquireOneMeasure();
 	}
 	if (fUsbReceived == 2)
 	{
 		fUsbReceived = 0;
-		HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,0xfff);
-		CDC_Transmit_FS("Nível Alto no DAC\n",strlen("Nível Alto no DAC\n"));
+		transmmitOneMeasure(adc1Data);
 	}
 	if (fUsbReceived == 3)
 	{
 		fUsbReceived = 0;
-		HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,0);
-		CDC_Transmit_FS("Nível Baixo no DAC\n",strlen("Nível Baixo no DAC\n"));
+		transmmitOneMeasure(adc2Data);
+	}
+	if (fUsbReceived == 4)
+	{
+		fUsbReceived = 0;
 	}
 
 /*
@@ -242,7 +252,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.NbrOfConversion = 2;
   hadc1.Init.DMAContinuousRequests = ENABLE;
-  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc1.Init.EOCSelection = ADC_EOC_SEQ_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -288,6 +298,13 @@ static void MX_DAC_Init(void)
   sConfig.DAC_Trigger = DAC_TRIGGER_NONE;
   sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
   if (HAL_DAC_ConfigChannel(&hdac, &sConfig, DAC_CHANNEL_1) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+    /**DAC channel OUT2 config 
+    */
+  if (HAL_DAC_ConfigChannel(&hdac, &sConfig, DAC_CHANNEL_2) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -339,33 +356,48 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void doIVmeasure(void)
-{
-	uint8_t message[80];
 
+void transmmitOneMeasure(uint16_t * adcData)
+{
+	uint16_t count = 0;
+	uint16_t buffer_count = 0;
+
+	uint8_t buffer[4096*2];
+
+	for(count = 0; count <= 0xFFF;)
+	{
+		buffer[buffer_count++] = (uint8_t) (adcData[count]>>8)&0xff;
+		buffer[buffer_count++] = (uint8_t) adcData[count++]&0xff;
+	}
+
+	CDC_Transmit_FS(buffer,4096*2);
+
+	return;
+}
+
+void aquireOneMeasure()
+{
 	uint16_t dacValue = 0;
 
-	sprintf(message,"\n\n\nADC1\tADC2\r\n",dacValue,adcValue);
-	CDC_Transmit_FS(message,strlen(message));
+	HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,0);
+	HAL_DAC_SetValue(&hdac,DAC_CHANNEL_2,DAC_ALIGN_12B_R,0);
 
 	for (dacValue = 0; dacValue <= 0xFFF; dacValue++)
 	{
 		HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,dacValue);
 
 		HAL_ADC_Start_DMA(&hadc1,(uint32_t *) adcValue,2);
-		if (HAL_ADC_PollForConversion(&hadc1,1) == HAL_OK)
-		{}
+		if (HAL_ADC_PollForConversion(&hadc1,1) == HAL_OK){}
 		HAL_ADC_Stop_DMA(&hadc1);
 
-		sprintf(message,"%d\t%d\r\n",adcValue[0],adcValue[1]);
-
-		CDC_Transmit_FS(message,strlen(message));
-
-		dacValue++;
-		if (dacValue > 0xFFF)
-			dacValue = 0;
+		adc1Data[dacValue] = adcValue[0];
+		adc2Data[dacValue] = adcValue[1];
 	}
-	HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,0xfff);
+
+	HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,0);
+	HAL_DAC_SetValue(&hdac,DAC_CHANNEL_2,DAC_ALIGN_12B_R,0);
+
+	return;
 }
 /* USER CODE END 4 */
 

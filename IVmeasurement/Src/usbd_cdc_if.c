@@ -328,6 +328,7 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
 void CDC_ReceiveCallBack(uint8_t * Buf, uint32_t Len)
 {
+	/*
 	uint8_t leitura[80];
 	strcpy(leitura,Buf);
 	if (strcmp("leitura\n",leitura) == 0)
@@ -349,6 +350,17 @@ void CDC_ReceiveCallBack(uint8_t * Buf, uint32_t Len)
 		}
 
 	}
+	*/
+
+	if  (Buf[0] == 1)
+		fUsbReceived = 1;
+	else if (Buf[0] == 2)
+		fUsbReceived = 2;
+	else if (Buf[0] == 3)
+		fUsbReceived = 3;
+	else if (Buf[0] == 4)
+		fUsbReceived = 4;
+
 
 }
 /* USER CODE END PRIVATE_FUNCTIONS_IMPLEMENTATION */

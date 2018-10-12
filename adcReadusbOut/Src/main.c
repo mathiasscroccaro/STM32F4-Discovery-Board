@@ -144,8 +144,8 @@ void doIVmeasure(void)
 	uint16_t adcValue = 0;
 	uint16_t dacValue = 0;
 
-	sprintf(message,"\n\n\nDAC\tADC\tVgs\r\n",dacValue,adcValue);
-	CDC_Transmit_FS(message,strlen(message));
+	//sprintf(message,"\n\n\nDAC\tADC\tVgs\r\n",dacValue,adcValue);
+	//CDC_Transmit_FS(message,strlen(message));
 
 	for (dacValue = 0; dacValue <= 0xFFF; dacValue++)
 	{
@@ -158,13 +158,19 @@ void doIVmeasure(void)
 		}
 		HAL_ADC_Stop(&hadc1);
 		sprintf(message,"%d\t%d\r\n",dacValue,adcValue);
-		CDC_Transmit_FS(message,strlen(message));
+		//CDC_Transmit_FS(message,strlen(message));
 
-		dacValue++;
-		if (dacValue > 0xFFF)
-			dacValue = 0;
+		// inicio MODIFICACAO 0 ***
 
-		HAL_Delay(1);
+		message[0] = (uint8_t) (dacValue>>8) & 0xFF;
+		message[1] = (uint8_t) dacValue & 0xFF;
+		message[2] = (uint8_t) (dacValue>>8) & 0xFF;
+		message[3] = (uint8_t) dacValue & 0xFF;
+		//message[2] = '\n';
+
+		CDC_Transmit_FS(message,4);
+
+		// fim MODIFICACAO 0 ***
 	}
 }
 
