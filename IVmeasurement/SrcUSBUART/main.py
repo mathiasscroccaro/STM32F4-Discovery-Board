@@ -38,7 +38,7 @@ class communicator:
     def saveData(self,dataMatrix):
         
     
-        path = datetime.datetime.now().strftime("%H-%M_%m-%d-%y")
+        path = "data/" + datetime.datetime.now().strftime("%H-%M_%m-%d-%y")
 
         if (not os.path.exists(path)):
             os.makedirs(path)
