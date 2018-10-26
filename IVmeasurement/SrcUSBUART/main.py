@@ -6,6 +6,7 @@ import argparse
 import numpy
 import datetime
 import os
+import time
 
 serPort = "/dev/ttyACM0"
 
@@ -38,7 +39,7 @@ class communicator:
     def saveData(self,dataMatrix):
         
     
-        path = "data/" + datetime.datetime.now().strftime("%H-%M_%m-%d-%y")
+        path = "data/" + datetime.datetime.now().strftime("%H-%M-%S_%m-%d-%y")
 
         if (not os.path.exists(path)):
             os.makedirs(path)
@@ -84,6 +85,44 @@ class communicator:
 
         return int_list
 
+    def readBytes(self):
+
+        ser = serial.Serial(port=self.serPort)
+        ser.timeout = 0.1
+        
+        print("Numero de medidas: {}".format(self.n))
+
+        dataMatrix = []
+
+        for i in range(self.n):
+            
+            measures = []
+            currents = []
+            voltages = []
+
+            print("Medida numero: {}".format(i))
+
+            ser.flush()
+            ser.write(bytes([1]))
+            
+            for measure in range(4096):
+                try:
+                    line = ser.read(4)
+                    print("medida: {}\t valor:{}\t\t{}\t{}\t{}\t{}".format(measure,line,line[0],line[1],line[2],line[3]))
+                    voltages.append( int.from_bytes(line[0:2],byteorder='big') )
+                    currents.append( int.from_bytes(line[2:4],byteorder='big') )
+                except:
+                    pass
+
+            dataMatrix.append([voltages, currents])
+        
+        ser.close()
+    
+        dataMatrix.append(self.mean(dataMatrix))
+        
+        self.saveData(dataMatrix)
+
+    
     def doMeasure(self):
 
 
@@ -98,12 +137,19 @@ class communicator:
         print("Numero de medidas: {}".format(self.n))
 
         for i in range(self.n):
-            
+           
+
             print("Medida numero: {}".format(i))
             
             ser.flush()
             ser.write(bytes([1]))
-            
+
+            #time.sleep(5)
+        
+            #ser.write(bytes([4]))
+            #ser.write(b''.join([bytes([4]),(self.v1).to_bytes(2,byteorder='big')]))
+            #print(b''.join([bytes([4]),(self.v1).to_bytes(2,byteorder='big')]))
+
             ser.flush()
             ser.write(bytes([2]))
             vMessage = ser.read(4096*2)
@@ -114,9 +160,9 @@ class communicator:
 
             vMessage = self.processRawData(vMessage)
             cMessage = self.processRawData(cMessage)
-        
-            vMessage = self.reescale(vMessage,4096,0,3.3/self.vg,0)
-            cMessage = self.reescale(cMessage,4096,0,3.3/self.cg,0)
+            
+            #vMessage = self.reescale(vMessage,4096,0,3.3/self.vg,0)
+            #cMessage = self.reescale(cMessage,4096,0,3.3/self.cg,0)
 
             dataMatrix.append([vMessage,cMessage])
 
@@ -132,7 +178,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-v1","--Vdac1",help="Voltage of the coarse grain DAC. Default = 0 V",type=float,default=0)
+    parser.add_argument("-v1","--Vdac1",help="Voltage of the coarse grain DAC. Default = 0 V",type=int,default=0)
     parser.add_argument("-n","--NumberOfRuns",help="Number of measures. Default = 1",type=int,default=1)
     parser.add_argument("-o","--Output",help="Name of output .asc file",type=str,default="log.asc")
     parser.add_argument("-m","--Message",help="Message that will describe the output file. It is insert at the head of the file")
@@ -147,6 +193,7 @@ if __name__ == "__main__":
     com.set(port=args.Port, n = args.NumberOfRuns, v1 = args.Vdac1, f = args.Output, m = args.Message, vg = args.VoltageGain, cg = args.CurrentGain)
 
     com.doMeasure()
+    #com.readBytes()
 
 
 

@@ -353,13 +353,25 @@ void CDC_ReceiveCallBack(uint8_t * Buf, uint32_t Len)
 	*/
 
 	if  (Buf[0] == 1)
+	{
+		USBh.flag = 1;
 		fUsbReceived = 1;
+	}
 	else if (Buf[0] == 2)
+	{
+		USBh.flag = 2;
 		fUsbReceived = 2;
+	}
 	else if (Buf[0] == 3)
+	{
+		USBh.flag = 3;
 		fUsbReceived = 3;
+	}
 	else if (Buf[0] == 4)
+	{
+		USBh.flag = 4;
 		fUsbReceived = 4;
+	}
 
 
 }

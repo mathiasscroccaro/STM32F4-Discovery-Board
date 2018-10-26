@@ -55,6 +55,11 @@
 
 /* USER CODE BEGIN Includes */
 extern unsigned char fUsbReceived;
+extern struct USBHandler {
+	unsigned char flag;
+	unsigned short data;
+} USBh;
+
 /* USER CODE END Includes */
 
 /* Private define ------------------------------------------------------------*/

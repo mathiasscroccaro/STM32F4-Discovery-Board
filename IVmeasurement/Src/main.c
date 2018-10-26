@@ -53,7 +53,10 @@
 
 /* USER CODE BEGIN Includes */
 #include <string.h>
+
 unsigned char fUsbReceived = 0;
+
+struct USBHandler USBh;
 
 /* USER CODE END Includes */
 
@@ -145,7 +148,7 @@ int main(void)
 	if (fUsbReceived == 1)
 	{
 		fUsbReceived = 0;
-		aquireOneMeasure();
+		aquireOneMeasure(2700,0);
 	}
 	if (fUsbReceived == 2)
 	{
@@ -160,6 +163,7 @@ int main(void)
 	if (fUsbReceived == 4)
 	{
 		fUsbReceived = 0;
+		aquireOneMeasure(2700,1);
 	}
 
 /*
@@ -375,12 +379,55 @@ void transmmitOneMeasure(uint16_t * adcData)
 	return;
 }
 
-void aquireOneMeasure()
+void aquireOneMeasure(uint16_t dac2Value,uint8_t way)
 {
 	uint16_t dacValue = 0;
 
-	HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,0);
-	HAL_DAC_SetValue(&hdac,DAC_CHANNEL_2,DAC_ALIGN_12B_R,0);
+	uint8_t message[30]; // NEW IMPLEMENTATION
+
+
+	HAL_DAC_SetValue(&hdac,DAC_CHANNEL_2,DAC_ALIGN_12B_R,dac2Value);
+
+	// NEW IMPLEMENTATION ************************************************
+	if (way == 0)
+	{
+		HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,0);
+
+		for (dacValue = 0; dacValue <= 0xFFF; dacValue++)
+		{
+			HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,dacValue);
+
+			HAL_ADC_Start_DMA(&hadc1,(uint32_t *) adcValue,2);
+			if (HAL_ADC_PollForConversion(&hadc1,1) == HAL_OK){}
+			HAL_ADC_Stop_DMA(&hadc1);
+
+			adc1Data[dacValue] = adcValue[0];
+			adc2Data[dacValue] = adcValue[1];
+		}
+	}
+	else
+	{
+		HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,0xFFF);
+
+		for (dacValue = 0xFFF; dacValue >= 0; dacValue--)
+		{
+			HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,dacValue);
+
+			HAL_ADC_Start_DMA(&hadc1,(uint32_t *) adcValue,2);
+			if (HAL_ADC_PollForConversion(&hadc1,1) == HAL_OK){}
+			HAL_ADC_Stop_DMA(&hadc1);
+
+			adc1Data[dacValue] = adcValue[0];
+			adc2Data[dacValue] = adcValue[1];
+		}
+	}
+
+	HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,0xFFF);
+	HAL_DAC_SetValue(&hdac,DAC_CHANNEL_2,DAC_ALIGN_12B_R,0xFFF);
+
+	return;
+
+	// END NEW IMPLEMENTATION ************************************************
 
 	for (dacValue = 0; dacValue <= 0xFFF; dacValue++)
 	{
@@ -392,6 +439,15 @@ void aquireOneMeasure()
 
 		adc1Data[dacValue] = adcValue[0];
 		adc2Data[dacValue] = adcValue[1];
+
+		//message[0] = (uint8_t) (adcValue[0]>>8);
+		//message[1] = (uint8_t) (adcValue[0]&0xff);
+		//message[2] = (uint8_t) (adcValue[1]>>8);
+		//message[3] = (uint8_t) (adcValue[1]&0xff);
+
+		//HAL_Delay(3);
+
+		//CDC_Transmit_FS(message,4); //NEW IMPLEMENTATION
 	}
 
 	HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,0);
