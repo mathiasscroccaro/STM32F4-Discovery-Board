@@ -1,0 +1,93 @@
+###############################################################################
+#
+#	IV Controller
+#
+#	Author: 	Mathias S. Costa
+#	Homepage:	github.com/mathiasscroccaro
+#
+###############################################################################
+
+#!/bin/bash
+
+DEVICE="/dev/ttyACM0"
+LOGFILE="lastDataLog"
+
+mcollor="\033[31m"
+dcollor="\033[37m"
+
+voltageSweep() {
+	echo -e "$mcollor ---{ Requesting DAC$1 voltage sweep $dcollor"
+	echo "v$1" > $DEVICE
+	
+	while IFS= read -r line && [ "$line" != "OK" ];
+	do
+		echo "$line"
+	done < "$DEVICE"
+}
+
+setDACVoltage() {
+	echo -e "$mcollor ---{ Setting DAC$1 voltage to $2 $dcollor"
+	echo "s$1$2" > $DEVICE
+
+	while IFS= read -r line && [ "$line" != "OK" ];
+	do
+		echo "$line"
+	done < "$DEVICE"
+}
+
+readData() {
+	echo -e "$mcollor ---{ Requesting data. Data file: $LOGFILE $dcollor"
+	echo "r" > $DEVICE
+	
+	while IFS= read -r line && [ "$line" != "OK" ];
+	do
+		echo "$line" >> $LOGFILE
+	done < "$DEVICE"
+}
+
+multipleDataRead() {
+	echo
+	echo -e "$mcollor ---{ Number of runs: $1"
+	echo -e " ---{ DAC channel: $2 $dcollor"
+	echo
+	
+	for (( i=0; i<$1; i++ ))
+	do
+		echo
+		echo -e "$mcollor Measure #$i $dcollor"
+		voltageSweep $2
+		readData
+		echo "Creating directory"
+		mkdir -p data
+		echo "Moving $LOGFILE to ./data/$LOGFILE.$i.csv"
+		mv $LOGFILE ./data/$LOGFILE.$i.csv
+	done
+}
+
+### Program starts here
+
+# Set permitions to device file
+echo -e "$mcollor ---{ Changing permission of device the file $DEVICE $dcollor"
+sudo chmod 666 $DEVICE
+
+# para v0.1
+#setDACVoltage 1 3000
+#multipleDataRead 1 2
+
+#setDACVoltage 2 1000
+#multipleDataRead 1 1
+
+# para v0.2
+#setDACVoltage 1 1000
+multipleDataRead 1 2
+
+#setDACVoltage 1 4095
+#setDACVoltage 2 4095
+
+#sleep 10
+
+#setDACVoltage 1 0
+#setDACVoltage 2 0
+
+
+echo "Done"

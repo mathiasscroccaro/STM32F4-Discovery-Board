@@ -1,0 +1,5 @@
+Ganho de tensão:	1.11
+Ganho de corrente:	326
+MPPT: 4.973644e-03 W @ 0.680822 V
+Potencia em MPPT: 2.617707e-04 W/cm2
+Voc: 0.918167	Isc: 0.008887

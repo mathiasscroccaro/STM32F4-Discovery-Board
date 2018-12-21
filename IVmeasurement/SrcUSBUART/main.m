@@ -8,8 +8,8 @@ arguments = argv();
 
 data = dlmread(char(arguments(1)));
 
-voltage = data(1:4030,1);
-current = data(1:4030,2);
+voltage = data(20:4030,1);
+current = data(20:4030,2);
 
 figure;
 
